@@ -1,4 +1,3 @@
-#include <SoftwareSerial.h>
 #include "signalenzo.h" //Thanks to Aeralius for helping create this library!
 
 float lastValue;
