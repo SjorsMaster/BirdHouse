@@ -31,6 +31,7 @@ public class Arduaano : MonoBehaviour {
     [SerializeField] GameObject carA, carB;
     [SerializeField] AudioSource src, src2, src3, src4;
     [SerializeField] GameObject loseText;
+    [SerializeField] GameObject notFound;
     [SerializeField] GameObject[] spawnables;
     [SerializeField] HandleScore score;
     bool wallchance = true;
@@ -42,11 +43,17 @@ public class Arduaano : MonoBehaviour {
 
     private void Awake() {
         renderer = GetComponent<SpriteRenderer>();
+        LookForArduino();
+    }
+
+    void LookForArduino() {
         Time.timeScale = 0;
         for (int i = 0; i < 12; i++) {
+
             try { stream = new SerialPort($"COM{i}", 9600); stream.Open(); i = 14; }
             catch { }
         }
+        if (stream.IsOpen) notFound.SetActive(false);
         Time.timeScale = 1;
     }
 
@@ -66,26 +73,32 @@ public class Arduaano : MonoBehaviour {
     //Getting the inputs
     IEnumerator ReadDataFromSerialPort() {
         while (true) {
-            if (stream.BytesToRead > 0) {
-                string tmpA = stream.ReadLine();
-                string[] tmpB = tmpA.Split(',');
-                if (tmpB[0] == "D4") {
-                    tilted = Convert.ToBoolean(int.Parse(tmpB[1]));
+            try {
+                if (stream.BytesToRead > 0) {
+                    string tmpA = stream.ReadLine();
+                    string[] tmpB = tmpA.Split(',');
+                    if (tmpB[0] == "D4") {
+                        tilted = Convert.ToBoolean(int.Parse(tmpB[1]));
+                    }
+                    if (tmpB[0] == "D5") {
+                        inHole = Convert.ToBoolean(int.Parse(tmpB[1]));
+                    }
+                    if (tmpB[0] == "D6") {
+                        pressedA = Convert.ToBoolean(int.Parse(tmpB[1]));
+                    }
+                    if (tmpB[0] == "D7") {
+                        pressedB = Convert.ToBoolean(int.Parse(tmpB[1]));
+                    }
+                    if (tmpB[0] == "A0") {
+                        pos = (float.Parse(tmpB[1]) - .5f) * acceleration;
+                    }
                 }
-                if (tmpB[0] == "D5") {
-                    inHole = Convert.ToBoolean(int.Parse(tmpB[1]));
-                }
-                if (tmpB[0] == "D6") {
-                    pressedA = Convert.ToBoolean(int.Parse(tmpB[1]));
-                }
-                if (tmpB[0] == "D7") {
-                    pressedB = Convert.ToBoolean(int.Parse(tmpB[1]));
-                }
-                if (tmpB[0] == "A0") {
-                    pos = (float.Parse(tmpB[1]) - .5f) * acceleration;
-                }
+                score.addScore(1);
             }
-            score.addScore(1);
+            catch {
+                notFound.SetActive(true);
+                LookForArduino();
+            }
             yield return new WaitForSecondsRealtime(0.05f);
         }
     }
